@@ -1805,7 +1805,7 @@ function liveViewUrl(url) {
   };
 }
 
-/* ── Fetch & Audit: use the parent app's server-side proxy ── */
+/* ── Fetch & Audit: use server-side proxy ── */
 function fetchAndAuditUrl(url) {
   const goBtn = document.getElementById('urlBarGo');
   const frame = document.getElementById('previewFrame');
@@ -1817,23 +1817,31 @@ function fetchAndAuditUrl(url) {
   // Re-apply sandbox for audited content
   frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals');
 
-  // Use the parent Next.js app's /api/proxy route
+  console.log('[PixelForge] Fetching:', url);
+
+  // Use the server-side proxy
   fetch('/api/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url: url })
   })
-    .then(r => { if (!r.ok) throw new Error('Server proxy error'); return r.json(); })
+    .then(r => {
+      console.log('[PixelForge] Proxy status:', r.status);
+      if (!r.ok) throw new Error('Server proxy returned ' + r.status);
+      return r.json();
+    })
     .then(data => {
       if (data.error) throw new Error(data.error);
       const html = data.html || '';
+      console.log('[PixelForge] Got HTML, length:', html.length);
       if (!html || html.trim().length < 20) throw new Error('Empty response from server');
       loadFetchedHtml(html, url);
     })
     .catch(err => {
+      console.error('[PixelForge] Fetch error:', err);
       _urlBarFetching = false;
       if (goBtn) goBtn.disabled = false;
-      setUrlBarStatus('Fetch failed', 'error');
+      setUrlBarStatus('Fetch failed: ' + err.message, 'error');
       showToast('Could not fetch page: ' + err.message, 'error');
     });
 }
@@ -1864,12 +1872,18 @@ function loadFetchedHtml(html, originalUrl) {
   updateChangelogFab();
 
   // Switch to edit mode so scoring works
-  editMode = 'edit';
-  updateModeIndicator();
+  setMode('edit');
+
+  // Make sure sandbox is set for fetched content
+  const frame = document.getElementById('previewFrame');
+  if (frame) {
+    frame.removeAttribute('src');
+    frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals');
+  }
 
   renderPreview();
-  setUrlBarStatus('Page fetched — scoring...', 'success');
-  showToast('Page fetched! Scoring...', 'success');
+  setUrlBarStatus('Page fetched & scored — ready to edit', 'success');
+  showToast('Page fetched! You can now edit and score it.', 'success');
 }
 
 // URL fetching is now handled by the parent Next.js app via server-side proxy.
