@@ -1846,21 +1846,14 @@ function fetchAndAuditUrl(url) {
     });
 }
 
-/* ── Load fetched HTML into preview, rewrite URLs, and auto-score ── */
+/* ── Load fetched HTML into preview and auto-score ── */
 function loadFetchedHtml(html, originalUrl) {
   const goBtn = document.getElementById('urlBarGo');
   _urlBarFetching = false;
   if (goBtn) goBtn.disabled = false;
 
-  // Rewrite relative URLs to absolute
-  let baseUrl = '';
-  try { baseUrl = new URL(originalUrl).origin; } catch {}
-
-  if (baseUrl) {
-    html = html
-      .replace(/(<(?:img|script|iframe|embed|video|audio|source|link)\s[^>]*src=["'])(\/[^"']*)(["'])/gi, '$1' + baseUrl + '$2$3')
-      .replace(/(<(?:a|link)\s[^>]*href=["'])(\/[^"']*)(["'])/gi, '$1' + baseUrl + '$2$3');
-  }
+  // URL rewriting is now handled by the server proxy (with <base> tag)
+  // No need to rewrite URLs client-side anymore
 
   currentHTML = sanitizeImportedHTML(html);
   initialScore = null;

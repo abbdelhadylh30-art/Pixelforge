@@ -45,9 +45,18 @@ export async function POST(request: NextRequest) {
     const contentType = response.headers.get('content-type') || '';
     const html = await response.text();
 
-    // Rewrite relative URLs to absolute
+    // Rewrite URLs to absolute so they work in srcdoc iframe
     const baseUrl = parsedUrl.origin;
-    const rewrittenHtml = html
+    // The page's path directory (for resolving relative URLs like "style.css")
+    const pagePath = parsedUrl.pathname.endsWith('/')
+      ? parsedUrl.pathname
+      : parsedUrl.pathname.substring(0, parsedUrl.pathname.lastIndexOf('/') + 1);
+    const pageDir = baseUrl + pagePath;
+
+    let rewrittenHtml = html;
+
+    // 1. Rewrite root-relative URLs: /path → https://domain/path
+    rewrittenHtml = rewrittenHtml
       .replace(
         /(<(?:img|script|iframe|embed|video|audio|source|link)\s[^>]*src=["'])(\/[^"']*)(["'])/gi,
         `$1${baseUrl}$2$3`
@@ -56,6 +65,27 @@ export async function POST(request: NextRequest) {
         /(<(?:a|link)\s[^>]*href=["'])(\/[^"']*)(["'])/gi,
         `$1${baseUrl}$2$3`
       );
+
+    // 2. Rewrite relative URLs that DON'T start with / or http:
+    //    e.g. src="style.css" → src="https://domain/path/style.css"
+    //    e.g. href="news.css" → href="https://domain/path/news.css"
+    rewrittenHtml = rewrittenHtml
+      .replace(
+        /(<(?:img|script|iframe|embed|video|audio|source|link)\s[^>]*src=["'])((?!https?:\/\/|\/\/|data:|blob:|#|javascript:)[^"']+)(["'])/gi,
+        `$1${pageDir}$2$3`
+      )
+      .replace(
+        /(<(?:a|link)\s[^>]*href=["'])((?!https?:\/\/|\/\/|data:|blob:|#|javascript:|mailto:|tel:)[^"']+)(["'])/gi,
+        `$1${pageDir}$2$3`
+      );
+
+    // 3. Add a <base> tag as fallback for anything we missed
+    if (!rewrittenHtml.includes('<base ')) {
+      rewrittenHtml = rewrittenHtml.replace(
+        /<head([^>]*)>/i,
+        `<head$1><base href="${pageDir}">`
+      );
+    }
 
     return NextResponse.json({
       html: rewrittenHtml,
