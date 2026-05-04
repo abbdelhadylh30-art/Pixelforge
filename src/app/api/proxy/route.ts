@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+export const maxDuration = 30;
+
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
@@ -45,12 +48,10 @@ export async function POST(request: NextRequest) {
     // Rewrite relative URLs to absolute
     const baseUrl = parsedUrl.origin;
     const rewrittenHtml = html
-      // Rewrite src attributes with relative paths
       .replace(
         /(<(?:img|script|iframe|embed|video|audio|source|link)\s[^>]*src=["'])(\/[^"']*)(["'])/gi,
         `$1${baseUrl}$2$3`
       )
-      // Rewrite href attributes with relative paths
       .replace(
         /(<(?:a|link)\s[^>]*href=["'])(\/[^"']*)(["'])/gi,
         `$1${baseUrl}$2$3`
