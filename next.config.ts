@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/pixelforge.html',
+        destination: '/api/page',
       },
     ];
   },
