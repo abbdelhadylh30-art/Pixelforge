@@ -1,12 +1,9 @@
+'use client';
+import { useEffect } from 'react';
+
 export default function Home() {
-  return (
-    <html lang="en">
-      <head>
-        <meta http-equiv="refresh" content="0;url=/pixelforge.html" />
-      </head>
-      <body>
-        <p>Redirecting to <a href="/pixelforge.html">PixelForge</a>...</p>
-      </body>
-    </html>
-  );
+  useEffect(() => {
+    window.location.href = '/pixelforge.html';
+  }, []);
+  return <p>Redirecting to PixelForge...</p>;
 }
